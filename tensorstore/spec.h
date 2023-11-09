@@ -57,6 +57,7 @@ class Spec {
   ///
   /// \id default
   Spec() = default;
+  internal::TransformedDriverSpec impl_;
 
   /// Returns `true` if this is a valid spec.
   bool valid() const { return static_cast<bool>(impl_.driver_spec); }
@@ -216,7 +217,7 @@ class Spec {
  private:
   friend class internal_spec::SpecAccess;
 
-  internal::TransformedDriverSpec impl_;
+  // internal::TransformedDriverSpec impl_;
 };
 
 namespace internal {
