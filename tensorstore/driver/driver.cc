@@ -95,8 +95,11 @@ Future<Driver::Handle> OpenDriver(OpenTransactionPtr transaction,
         if (!handle.ok()) {
           status = handle.status();
         } else if (bound_spec.transform.valid()) {
+          // ============================================================================ //
+          // This is where my transform error comes from                                  //
           auto composed_transform = tensorstore::ComposeTransforms(
               std::move(handle->transform), std::move(bound_spec.transform));
+          // ============================================================================ //
           if (composed_transform.ok()) {
             handle->transform = std::move(composed_transform).value();
           } else {
