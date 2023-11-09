@@ -37,6 +37,7 @@
 #include "tensorstore/contiguous_layout.h"
 #include "tensorstore/data_type.h"
 #include "tensorstore/driver/driver_testutil.h"
+#include "tensorstore/driver/zarr/metadata.h"
 #include "tensorstore/driver/zarr/dtype.h"
 #include "tensorstore/index.h"
 #include "tensorstore/index_space/dim_expression.h"
@@ -3447,6 +3448,93 @@ TEST(DriverTest, AssumeCachedMetadataMismatch) {
 
   EXPECT_THAT(tensorstore::ResolveBounds(store).result(),
               MatchesStatus(absl::StatusCode::kFailedPrecondition));
+}
+
+std::string_view metadata_text = R"(
+
+        {
+            "dtype": [["a", "<i2"], ["b", "<i4"], ["c", "|V12"]],
+            "shape": [100, 100],
+            "chunks": [3, 2],
+            "compressor": {
+                "id": "blosc"
+            },
+            "dimension_separator": "/",
+            "zarr_format": 2,
+            "fill_value": null,
+            "order": "F",
+            "filters": null
+        }
+        )";
+
+TEST(MDIO, SpecifiedSpec) {
+    nlohmann::json meta_json = nlohmann::json::parse(metadata_text, nullptr, false);
+    ASSERT_FALSE(meta_json.is_discarded());
+    TENSORSTORE_ASSERT_OK_AND_ASSIGN(auto metadata, ::tensorstore::internal_zarr::ZarrMetadata::FromJson(meta_json));
+    EXPECT_TRUE(tensorstore::Spec::FromJson({
+        {"driver", "zarr"},
+        {"kvstore", {{"driver", "file"}, {"path", "test.zarr"}}},
+        {"metadata", metadata},
+        {"field", metadata.dtype.fields[0].name},
+    }).status().ok());
+}
+
+TEST(MDIO, UnspecifiedSpec) {
+    nlohmann::json meta_json = nlohmann::json::parse(metadata_text, nullptr, false);
+    ASSERT_FALSE(meta_json.is_discarded());
+    TENSORSTORE_ASSERT_OK_AND_ASSIGN(auto metadata, ::tensorstore::internal_zarr::ZarrMetadata::FromJson(meta_json));
+    auto spec = tensorstore::Spec::FromJson({
+        {"driver", "zarr"},
+        {"kvstore", {{"driver", "file"}, {"path", "test.zarr"}}},
+        {"metadata", metadata},
+    }).status();
+    // EXPECT_TRUE(tensorstore::Spec::FromJson({
+    //     {"driver", "zarr"},
+    //     {"kvstore", {{"driver", "file"}, {"path", "test.zarr"}}},
+    //     {"metadata", metadata},
+    // }).status().ok());
+    EXPECT_TRUE(spec.ok()) << spec;
+}
+
+// TODO: Implement singleton test cases
+// TODO: Implement test case for different open modes
+bool quietFail = false;
+
+TEST(MDIO, SpecifiedOpen) {
+    nlohmann::json meta_json = nlohmann::json::parse(metadata_text, nullptr, false);
+    ASSERT_FALSE(meta_json.is_discarded());
+    TENSORSTORE_ASSERT_OK_AND_ASSIGN(auto metadata, ::tensorstore::internal_zarr::ZarrMetadata::FromJson(meta_json));
+    auto spec = tensorstore::Spec::FromJson({
+        {"driver", "zarr"},
+        {"kvstore", {{"driver", "file"}, {"path", "test.zarr"}}},
+        {"metadata", metadata},
+        {"field", metadata.dtype.fields[0].name},
+    });
+
+    auto store = tensorstore::Open(spec.value(), tensorstore::OpenMode::open_or_create);
+    if(quietFail) {
+        EXPECT_TRUE(store.status().ok());
+    } else {
+        EXPECT_TRUE(store.status().ok()) << store.status();
+    }
+}
+
+TEST(MDIO, UnspecifiedOpen) {
+    nlohmann::json meta_json = nlohmann::json::parse(metadata_text, nullptr, false);
+    ASSERT_FALSE(meta_json.is_discarded());
+    TENSORSTORE_ASSERT_OK_AND_ASSIGN(auto metadata, ::tensorstore::internal_zarr::ZarrMetadata::FromJson(meta_json));
+    auto spec = tensorstore::Spec::FromJson({
+        {"driver", "zarr"},
+        {"kvstore", {{"driver", "file"}, {"path", "test.zarr"}}},
+        {"metadata", metadata},
+    });
+
+    auto store = tensorstore::Open(spec.value(), tensorstore::OpenMode::open_or_create);
+    if(quietFail) {
+        EXPECT_TRUE(store.status().ok());
+    } else {
+        EXPECT_TRUE(store.status().ok()) << store.status();
+    }
 }
 
 }  // namespace
