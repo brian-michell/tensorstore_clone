@@ -111,10 +111,19 @@ absl::Status ValidateMetadata(const ZarrMetadata& metadata,
     }
   }
   if (constraints.fill_value) {
-    auto a = EncodeFillValue(metadata.dtype, *constraints.fill_value);
-    auto b = EncodeFillValue(metadata.dtype, metadata.fill_value);
-    if (a != b) {
-      return MetadataMismatchError("fill_value", a, b);
+    if(correctly_voided) {
+      std::cout << "\033[33mWARNING:::Value filling still needs to be implemented!\033[0m" << std::endl;
+      auto a = EncodeFillValue(constraints.dtype.value(), *constraints.fill_value);
+      auto b = EncodeFillValue(constraints.dtype.value(), constraints.fill_value.value());
+      if(a != b) {
+        return MetadataMismatchError("fill_value", a, b);
+      }
+    } else {
+      auto a = EncodeFillValue(metadata.dtype, *constraints.fill_value);
+      auto b = EncodeFillValue(metadata.dtype, metadata.fill_value);
+      if (a != b) {
+        return MetadataMismatchError("fill_value", a, b);
+      }
     }
   }
   if (constraints.dimension_separator && metadata.dimension_separator &&
