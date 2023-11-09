@@ -21,3 +21,5 @@ __pycache__
 *.pyc
 /python/tensorstore/*.so
 /python/tensorstore/*.pyd
+
+/build
