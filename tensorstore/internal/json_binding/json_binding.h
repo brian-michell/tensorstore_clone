@@ -816,15 +816,15 @@ constexpr auto Object(MemberBinder... member_binder) {
     if constexpr (is_loading) {
       if constexpr (std::is_same_v<::nlohmann::json*, decltype(j)>) {
 
-        if(j->contains("metadata") && !j->contains("field")) {
-          std::cout << "\tHas metadata and no field" << std::endl;
+        if(j->contains("driver") && (*j)["driver"] == "zarr" && j->contains("metadata") && !j->contains("field")) {
+          // std::cout << "\tHas metadata and no field" << std::endl;
           auto& metadata = (*j)["metadata"];
           auto& dtype = metadata["dtype"];
           if(dtype.is_array() && dtype.size() >= 2) {
             int bytes = 0;
-            std::cout << "\t\tDtype is an array of size >=2" << std::endl;
+            // std::cout << "\t\tDtype is an array of size >=2" << std::endl;
             for(auto& element : dtype) {
-              std::cout << "Element: " << element[0] << "\tType: " << element[1] << std::endl;
+              // std::cout << "Element: " << element[0] << "\tType: " << element[1] << std::endl;
               std::string element_str = std::string(element[1]);
               bytes += std::stoi(element_str.substr(2));
             }
