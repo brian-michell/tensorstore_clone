@@ -3494,6 +3494,10 @@ TEST(MDIO, UnspecifiedSpec) {
 // TODO: Implement test case for different open modes
 bool quietFail = false;
 
+void bp() {
+    std::cout << "breakpoint" << std::endl;
+}
+
 TEST(MDIO, SpecifiedOpen) {
     nlohmann::json meta_json = nlohmann::json::parse(metadata_text, nullptr, false);
     ASSERT_FALSE(meta_json.is_discarded());
@@ -3504,6 +3508,19 @@ TEST(MDIO, SpecifiedOpen) {
         {"metadata", metadata},
         {"field", metadata.dtype.fields[0].name},
     });
+    bp();
+
+    std::cout << metadata.shape.size() << std::endl;
+
+    std::cout << "=====================================================" << std::endl;
+    std::cout << spec.value() << std::endl;
+    std::cout << spec.value().impl_.transform << std::endl;
+    // std::cout << spec.value().impl_.driver_spec << std::endl;
+    // std::cout << spec.value().rank() << std::endl;
+    // std::cout << spec.value().metadata << std::endl;
+    // std::cout << spec.value().schema() << std::endl;
+    // std::cout << spec.value().base() << std::endl;
+    std::cout << "=====================================================" << std::endl;
 
     auto store = tensorstore::Open(spec.value(), tensorstore::OpenMode::open_or_create);
     if(quietFail) {
@@ -3522,6 +3539,13 @@ TEST(MDIO, UnspecifiedOpen) {
         {"kvstore", {{"driver", "file"}, {"path", "test.zarr"}}},
         {"metadata", metadata},
     });
+
+    std::cout << "=====================================================" << std::endl;
+    std::cout << spec.value() << std::endl;
+    // std::cout << spec.value().rank() << std::endl;
+    // std::cout << spec.value().isVoided << std::endl;
+    std::cout << spec.value().transform() << std::endl;
+    std::cout << "=====================================================" << std::endl;
 
     auto store = tensorstore::Open(spec.value(), tensorstore::OpenMode::open_or_create);
     if(quietFail) {
