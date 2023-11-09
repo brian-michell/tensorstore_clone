@@ -476,10 +476,16 @@ class ZarrDriver::OpenState : public ZarrDriver::OpenStateBase {
     const auto& metadata = *static_cast<const ZarrMetadata*>(metadata_ptr);
     TENSORSTORE_RETURN_IF_ERROR(
         ValidateMetadata(metadata, spec().partial_metadata));
+    auto desired_metadata_dtype = (spec().partial_metadata.dtype.value().fields[0].name == "VOIDED") ? spec().partial_metadata.dtype.value() : metadata.dtype;
     TENSORSTORE_ASSIGN_OR_RETURN(
-        auto field_index, GetFieldIndex(metadata.dtype, spec().selected_field));
-    TENSORSTORE_RETURN_IF_ERROR(
-        ValidateMetadataSchema(metadata, field_index, spec().schema));
+        auto field_index, GetFieldIndex(desired_metadata_dtype, spec().selected_field));
+    if(spec().partial_metadata.dtype.value().fields[0].name == "VOIDED") {
+      std::cout << "\tExpecting voided metadata override" << std::endl;
+      std::cout << "\tPassing over for now! WARNING: This could be dangerous!" << std::endl;
+    } else {
+      TENSORSTORE_RETURN_IF_ERROR(
+          ValidateMetadataSchema(metadata, field_index, spec().schema));
+    }
     return field_index;
   }
 };
