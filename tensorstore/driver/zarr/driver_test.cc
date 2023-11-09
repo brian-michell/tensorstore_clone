@@ -3483,17 +3483,11 @@ TEST(MDIO, UnspecifiedSpec) {
     nlohmann::json meta_json = nlohmann::json::parse(metadata_text, nullptr, false);
     ASSERT_FALSE(meta_json.is_discarded());
     TENSORSTORE_ASSERT_OK_AND_ASSIGN(auto metadata, ::tensorstore::internal_zarr::ZarrMetadata::FromJson(meta_json));
-    auto spec = tensorstore::Spec::FromJson({
+    EXPECT_TRUE(tensorstore::Spec::FromJson({
         {"driver", "zarr"},
         {"kvstore", {{"driver", "file"}, {"path", "test.zarr"}}},
         {"metadata", metadata},
-    }).status();
-    // EXPECT_TRUE(tensorstore::Spec::FromJson({
-    //     {"driver", "zarr"},
-    //     {"kvstore", {{"driver", "file"}, {"path", "test.zarr"}}},
-    //     {"metadata", metadata},
-    // }).status().ok());
-    EXPECT_TRUE(spec.ok()) << spec;
+    }).status().ok());
 }
 
 // TODO: Implement singleton test cases
