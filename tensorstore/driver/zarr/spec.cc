@@ -78,6 +78,7 @@ void GetChunkInnerOrder(DimensionIndex chunked_rank,
 
 absl::Status ValidateMetadata(const ZarrMetadata& metadata,
                               const ZarrPartialMetadata& constraints) {
+  bool correctly_voided = false;
   if (constraints.shape && *constraints.shape != metadata.shape) {
     return MetadataMismatchError("shape", *constraints.shape, metadata.shape);
   }
@@ -97,7 +98,22 @@ absl::Status ValidateMetadata(const ZarrMetadata& metadata,
   }
   if (constraints.dtype && ::nlohmann::json(*constraints.dtype) !=
                                ::nlohmann::json(metadata.dtype)) {
-    return MetadataMismatchError("dtype", *constraints.dtype, metadata.dtype);
+    std::cout << "DEBUG:::ValidateMetadata() tensorstore/driver/zarr/spec.cc Found a mismatch in dtype!!!" << std::endl;
+    // Update to check if the key "VOIDED" is present and then verify the total amount of bytes match
+    if(constraints.dtype.value().fields[0].name == "VOIDED") {
+      int expected_bytes = constraints.dtype.value().fields[0].num_bytes;
+      int actual_bytes = 0;
+      for (const auto& field : metadata.dtype.fields) {
+        actual_bytes += field.num_bytes;
+      }
+      if(expected_bytes == actual_bytes) {
+        std::cout << "Correctly voided!" << std::endl;
+        correctly_voided = true;
+      }
+    }
+    if(!correctly_voided) {
+      return MetadataMismatchError("dtype", *constraints.dtype, metadata.dtype);
+    }
   }
   if (constraints.fill_value) {
     auto a = EncodeFillValue(metadata.dtype, *constraints.fill_value);
