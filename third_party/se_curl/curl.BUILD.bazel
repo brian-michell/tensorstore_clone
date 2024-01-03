@@ -1,59 +1,9 @@
 load("@tensorstore//bazel:utils.bzl", "package_relative_path")
 load("@bazel_skylib//rules:write_file.bzl", "write_file")
-load("@bazel_skylib//rules:common_settings.bzl", "bool_flag")
 
 licenses(["notice"])
 
 exports_files(["COPYING"])
-
-# To enable curl debug output, specify:
-# bazel build --@se_curl//:debug
-bool_flag(
-    name = "debug",
-    build_setting_default = False,
-)
-
-config_setting(
-    name = "debug_setting",
-    flag_values = {
-        ":debug": "True",
-    },
-    visibility = ["//visibility:private"],
-)
-
-LOCAL_DEFINES = [
-    "BUILDING_LIBCURL",
-    "HTTP_ONLY",
-    "HAVE_CONFIG_H",
-    "HAVE_LIBZ",
-    "HAVE_ZLIB_H",
-    "HAVE_BROTLI",
-    "ENABLE_IPV6",
-    # "USE_ARES",  # TODO: Enable c-ares; after debugging broken test.
-] + select({
-    "@platforms//os:windows": [
-        "CURL_DISABLE_PROXY",
-        # Defining _USING_V110_SDK71_ is hackery to defeat curl's incorrect
-        # detection of what OS releases we can build on with VC 2012. This
-        # may not be needed (or may have to change) if the WINVER setting
-        # changes in //third_party/msvc/vc_12_0/CROSSTOOL.
-        "_USING_V110_SDK71_",
-    ],
-    "//conditions:default": ["_GNU_SOURCE"],
-}) + select({
-    "@platforms//os:osx": [],
-    "@platforms//os:windows": [
-        # See curl.h for discussion of write size and Windows
-        "CURL_MAX_WRITE_SIZE=16384",
-        "USE_IPV6",
-    ],
-    "//conditions:default": [
-        "CURL_MAX_WRITE_SIZE=65536",
-    ],
-}) + select({
-    ":debug_setting": ["DEBUGBUILD"],
-    "//conditions:default": [],
-})
 
 cc_library(
     name = "curl",
@@ -63,13 +13,14 @@ cc_library(
                    "lib/**/*.c",
                ],
                exclude = [
+                   "lib/vtls/sectransp.c",
+                   "lib/idn_win32.c",
                    "lib/socks_sspi.c",
                    "lib/system_win32.c",
                    "lib/vauth/spnego_sspi.c",
-                   "lib/vtls/openssl.c",
                    "lib/vtls/schannel.c",
                    "lib/vtls/schannel_verify.c",
-                   "lib/vtls/sectransp.c",
+                   "lib/vtls/openssl.c",
                ],
            ) +
            select({
@@ -80,6 +31,7 @@ cc_library(
                    "lib/vtls/sectransp.c",
                ],
                "@platforms//os:windows": [
+                   "lib/idn_win32.c",
                    "lib/socks_sspi.c",
                    "lib/system_win32.c",
                    "lib/vauth/spnego_sspi.c",
@@ -99,7 +51,6 @@ cc_library(
                 ":compiler_msvc": [],
                 "//conditions:default": [
                     "-Wno-string-plus-int",
-                    "-Wno-pointer-bool-conversion",
                 ],
             }) +
             select({
@@ -130,7 +81,7 @@ cc_library(
             "-lrt",
         ],
     }) + select({
-        ":compiler_mingw_gcc": [
+        ":compiler_mingw-gcc": [
             "-lws2_32",
             "-ladvapi32",
             "-lcrypt32",
@@ -139,7 +90,34 @@ cc_library(
         ],
         "//conditions:default": [],
     }),
-    local_defines = LOCAL_DEFINES,
+    local_defines = [
+        "BUILDING_LIBCURL",
+        "HTTP_ONLY",
+        "HAVE_CONFIG_H",
+        "HAVE_LIBZ",
+        "HAVE_ZLIB_H",
+        "HAVE_BROTLI",
+        # "USE_ARES",  # TODO: Enable c-ares; after debugging broken test.
+    ] + select({
+        "@platforms//os:windows": [
+            "CURL_DISABLE_PROXY",
+            # Defining _USING_V110_SDK71_ is hackery to defeat curl's incorrect
+            # detection of what OS releases we can build on with VC 2012. This
+            # may not be needed (or may have to change) if the WINVER setting
+            # changes in //third_party/msvc/vc_12_0/CROSSTOOL.
+            "_USING_V110_SDK71_",
+        ],
+        "//conditions:default": ["_GNU_SOURCE"],
+    }) + select({
+        "@platforms//os:osx": [],
+        "@platforms//os:windows": [
+            # See curl.h for discussion of write size and Windows
+            "CURL_MAX_WRITE_SIZE=16384",
+        ],
+        "//conditions:default": [
+            "CURL_MAX_WRITE_SIZE=65536",
+        ],
+    }),
     strip_include_prefix = "include",
     visibility = ["//visibility:public"],
     deps = [
@@ -414,13 +392,16 @@ write_file(
     newline = "unix",
 )
 
-[
-    alias(
-        name = name,
-        actual = "@tensorstore//:{target}".format(target = name),
-    )
-    for name in [
-        "compiler_mingw_gcc",
-        "compiler_msvc",
-    ]
-]
+config_setting(
+    name = "compiler_msvc",
+    flag_values = {
+        "@bazel_tools//tools/cpp:compiler": "msvc-cl",
+    },
+)
+
+config_setting(
+    name = "compiler_mingw-gcc",
+    flag_values = {
+        "@bazel_tools//tools/cpp:compiler": "mingw-gcc",
+    },
+)
