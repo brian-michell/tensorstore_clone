@@ -511,7 +511,7 @@ class ZarrDriver::OpenState : public ZarrDriver::OpenStateBase {
       {
         AllocateArray(
           field.field_shape, ContiguousLayoutOrder::c,
-          default_init, field.dtype
+          value_init, field.dtype
         )        
       }
     );
